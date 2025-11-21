@@ -8,12 +8,12 @@ import java.util.Map;
  * This class generates a statement for a given invoice of performances.
  */
 public class StatementPrinter {
-    private Invoice invoice;
     private static Map<String, Play> plays;
+    private final Invoice invoice;
 
     public StatementPrinter(Invoice invoice, Map<String, Play> plays) {
         this.invoice = invoice;
-        this.plays = plays;
+        StatementPrinter.plays = plays;
     }
 
     /**
@@ -32,11 +32,10 @@ public class StatementPrinter {
 
         for (Performance performance : invoice.getPerformances()) {
 
-            int rslt = 0;
-            rslt = getAmount(performance);
+            final int rslt = getAmount(performance);
 
             // add volume credits
-            volumeCredits += Math.max(performance.getAudience() - Constants.BASE_VOLUME_CREDIT_THRESHOLD, 0);
+            volumeCredits = getVolumeCredits(performance, volumeCredits);
             // add extra credit for every five comedy attendees
             if ("comedy".equals(getPlay(performance).getType())) {
                 volumeCredits += performance.getAudience() / Constants.COMEDY_EXTRA_VOLUME_FACTOR;
@@ -50,6 +49,10 @@ public class StatementPrinter {
         result.append(String.format("Amount owed is %s%n", frmt.format(totalAmount / Constants.PERCENT_FACTOR)));
         result.append(String.format("You earned %s credits%n", volumeCredits));
         return result.toString();
+    }
+
+    private static int getVolumeCredits(Performance performance, int volumeCredits) {
+        return volumeCredits + Math.max(performance.getAudience() - Constants.BASE_VOLUME_CREDIT_THRESHOLD, 0);
     }
 
     private static Play getPlay(Performance performance) {
