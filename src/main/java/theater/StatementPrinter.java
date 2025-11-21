@@ -22,32 +22,52 @@ public class StatementPrinter {
      * @throws RuntimeException if one of the play types is not known
      */
     public String statement() {
-        int totalAmount = 0;
-        int volumeCredits = 0;
 
         final StringBuilder result = new StringBuilder("Statement for " + invoice.getCustomer()
                 + System.lineSeparator());
 
+        final Map<Performance, Integer> amounts = new java.util.HashMap<>();
+
+        final int totalAmount = getTotalAmount(amounts);
+
         for (Performance performance : invoice.getPerformances()) {
 
-            final int rslt = getAmount(performance);
+            final int amt = amounts.get(performance);
 
-            // add volume credits
+            result.append(String.format(
+                    "  %s: %s (%s seats)%n",
+                    getPlay(performance).getName(),
+                    usd(amt),
+                    performance.getAudience()));
+        }
+
+        result.append(String.format("Amount owed is %s%n",
+                usd(totalAmount)));
+        result.append(String.format("You earned %s credits%n", getTotalVolumeCredits()));
+        return result.toString();
+    }
+
+    private int getTotalAmount(Map<Performance, Integer> amounts) {
+        int totalAmount = 0;
+        for (Performance performance : invoice.getPerformances()) {
+            final int amt = getAmount(performance);
+            amounts.put(performance, amt);
+            totalAmount += amt;
+        }
+        return totalAmount;
+    }
+
+    private int getTotalVolumeCredits() {
+        int volumeCredits = 0;
+        for (Performance performance : invoice.getPerformances()) {
+
             volumeCredits = getVolumeCredits(performance, volumeCredits);
-            // add extra credit for every five comedy attendees
+
             if ("comedy".equals(getPlay(performance).getType())) {
                 volumeCredits += performance.getAudience() / Constants.COMEDY_EXTRA_VOLUME_FACTOR;
             }
-
-            // print line for this order
-            result.append(String.format("  %s: %s (%s seats)%n", getPlay(performance).getName(),
-                    usd(rslt), performance.getAudience()));
-            totalAmount += rslt;
         }
-        result.append(String.format("Amount owed is %s%n",
-                usd(totalAmount)));
-        result.append(String.format("You earned %s credits%n", volumeCredits));
-        return result.toString();
+        return volumeCredits;
     }
 
     private static String usd(int totalAmount) {
